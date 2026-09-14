@@ -332,7 +332,7 @@ const glassShader = `
 
 const excluded = (target: EventTarget | null) =>
   target instanceof Element &&
-  !!target.closest('.project-card, .project-detail');
+  !!target.closest('.project-detail');
 
 export function RippleField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

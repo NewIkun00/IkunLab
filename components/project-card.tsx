@@ -1,6 +1,6 @@
 'use client';
 
-import { MouseEvent, useEffect, useRef } from 'react';
+import { CSSProperties, useEffect, useRef } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 
 export type ProjectCategory = '用户体验' | '数字孪生' | 'AI设计工程' | '3D美术视觉品牌' | '独立开发者';
@@ -13,7 +13,7 @@ export type Project = {
   categories: ProjectCategory[];
 };
 
-export function ProjectCard({ project, index, onOpen, onHover }: { project: Project; index: number; onOpen: (project: Project, rect: DOMRect) => void; onHover: (active: boolean) => void }) {
+export function ProjectCard({ project, index, onOpen }: { project: Project; index: number; onOpen: (project: Project, rect: DOMRect) => void }) {
   const cardRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -29,32 +29,27 @@ export function ProjectCard({ project, index, onOpen, onHover }: { project: Proj
     return () => observer.disconnect();
   }, []);
 
-  const move = (event: MouseEvent<HTMLButtonElement>) => {
-    const card = event.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width - .5;
-    const y = (event.clientY - rect.top) / rect.height - .5;
-    card.style.setProperty('--mx', `${x * -34}px`);
-    card.style.setProperty('--my', `${y * -28}px`);
-    card.style.setProperty('--rx', `${y * -3.4}deg`);
-    card.style.setProperty('--ry', `${x * 4.8}deg`);
-    card.style.setProperty('--warp', `${50 + x * 13}% ${50 + y * 13}%`);
-  };
-
-  const leave = (event: MouseEvent<HTMLButtonElement>) => {
-    event.currentTarget.style.setProperty('--mx', '0px');
-    event.currentTarget.style.setProperty('--my', '0px');
-    event.currentTarget.style.setProperty('--rx', '0deg');
-    event.currentTarget.style.setProperty('--ry', '0deg');
-    event.currentTarget.style.setProperty('--warp', '50% 50%');
-    onHover(false);
-  };
-
   return (
-    <button ref={cardRef} className={`project-card project-${index + 1}`} onMouseMove={move} onMouseEnter={() => onHover(true)} onMouseLeave={leave} onClick={() => onOpen(project, cardRef.current!.getBoundingClientRect())}>
-      <div className="project-image"><img src={project.image} alt="" style={{ objectPosition: project.position }} /><span className="project-no">0{index + 1}</span></div>
-      <div className="project-meta"><span>{project.tags}</span><ArrowUpRight size={18} /></div>
-      <h3>{project.title}</h3>
+    <button ref={cardRef} className={`project-card project-${index + 1}`} onClick={() => onOpen(project, cardRef.current!.getBoundingClientRect())}>
+      <div className="project-card-body">
+        <div className="project-image" data-depth="/images/project-parallax-depth.png"><img src={project.image} alt="" style={{ objectPosition: project.position }} /></div>
+        <div className="project-meta"><span>{project.tags}</span></div>
+        <div className="project-title-row">
+          <span className="project-title-arrow" aria-hidden="true"><ArrowUpRight /></span>
+          <h3 aria-label={project.title}>
+            {Array.from(project.title).map((character, characterIndex) => (
+              <span
+                key={`${character}-${characterIndex}`}
+                aria-hidden="true"
+                className="project-title-character"
+                style={{ '--character-index': characterIndex } as CSSProperties}
+              >
+                {character === ' ' ? '\u00a0' : character}
+              </span>
+            ))}
+          </h3>
+        </div>
+      </div>
     </button>
   );
 }

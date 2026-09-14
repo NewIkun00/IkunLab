@@ -5,20 +5,34 @@ import { ArrowDown, ArrowUpRight, Plus, X } from 'lucide-react';
 import { PhysicsHero } from '@/components/physics-hero';
 import { LiquidMetalButton } from '@/components/liquid-metal-button';
 import { Project, ProjectCard, ProjectCategory } from '@/components/project-card';
+import { ProjectCurveField } from '@/components/project-curve-field';
 import { RippleField } from '@/components/ripple-field';
 
-const projects: Project[] = [
+const projectData: Project[] = [
   { title: 'Signal / 01', tags: 'ART DIRECTION • WEB • 3D', image: '/images/project-glass.png', position: 'center', categories: ['AI设计工程', '独立开发者'] },
   { title: 'Matter Study', tags: 'INTERACTION • MOTION • CGI', image: '/images/hero-forms.png', position: '52% 45%', categories: ['3D美术视觉品牌'] },
   { title: 'Blue Hour', tags: 'IDENTITY • DIGITAL • EXPERIENCE', image: '/images/project-glass.png', position: '72% center', categories: ['用户体验'] },
   { title: 'Form & Flow', tags: 'CONCEPT • DESIGN • DEVELOPMENT', image: '/images/hero-forms.png', position: '28% 60%', categories: ['数字孪生'] },
+  { title: 'Spatial Signal', tags: 'UX • SYSTEM • PROTOTYPE', image: '/images/project-glass.png', position: '32% center', categories: ['用户体验', '数字孪生'] },
+  { title: 'Synthetic Nature', tags: 'GENERATIVE • MOTION • 3D', image: '/images/hero-forms.png', position: '68% 42%', categories: ['AI设计工程', '3D美术视觉品牌'] },
+  { title: 'Parallel Field', tags: 'DIGITAL TWIN • DATA • WEBGL', image: '/images/project-glass.png', position: '18% 55%', categories: ['数字孪生'] },
+  { title: 'Future Archive', tags: 'EXPERIENCE • IDENTITY • AI', image: '/images/hero-forms.png', position: '82% 58%', categories: ['用户体验', 'AI设计工程'] },
+  { title: 'Machine Poetry', tags: 'AI • CREATIVE CODE • VISUAL', image: '/images/project-glass.png', position: '58% 38%', categories: ['AI设计工程', '独立开发者'] },
+  { title: 'Living Interface', tags: 'PRODUCT • MOTION • INTERACTION', image: '/images/hero-forms.png', position: '38% 64%', categories: ['用户体验'] },
+  { title: 'Material Memory', tags: 'LOOKDEV • CGI • ART DIRECTION', image: '/images/project-glass.png', position: '78% 48%', categories: ['3D美术视觉品牌'] },
+  { title: 'Independent / 12', tags: 'DESIGN • CODE • EXPERIMENT', image: '/images/hero-forms.png', position: '22% 46%', categories: ['独立开发者'] },
 ];
+
+const projects: Project[] = projectData.map((project) => ({
+  ...project,
+  image: '/images/project-parallax-color.png',
+  position: '50% 50%',
+}));
 
 const workCategories = ['全部', '用户体验', '数字孪生', 'AI设计工程', '3D美术视觉品牌', '独立开发者'] as const;
 type WorkCategory = '全部' | ProjectCategory;
 
 export default function Home() {
-  const cursorRef = useRef<HTMLDivElement>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement>(null);
   const scrollThumbRef = useRef<HTMLSpanElement>(null);
   const scrollIdleTimerRef = useRef<number | null>(null);
@@ -40,11 +54,8 @@ export default function Home() {
         thumb.style.setProperty('--scroll-y', `${progress * travel}px`);
       }
     };
-    const onMove = (event: PointerEvent) => {
-      if (cursorRef.current) cursorRef.current.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
-    };
+
     const onScroll = () => {
-      cursorRef.current?.classList.remove('is-active');
       updateScrollIndicator();
     };
     const onWheel = () => {
@@ -55,21 +66,16 @@ export default function Home() {
       }, 1050);
     };
     updateScrollIndicator();
-    window.addEventListener('pointermove', onMove);
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('wheel', onWheel, { passive: true });
     return () => {
-      window.removeEventListener('pointermove', onMove);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('wheel', onWheel);
       if (scrollIdleTimerRef.current !== null) window.clearTimeout(scrollIdleTimerRef.current);
     };
   }, []);
 
-  const setCursorActive = (active: boolean) => cursorRef.current?.classList.toggle('is-active', active);
-
   const openProject = (project: Project, rect: DOMRect) => {
-    setCursorActive(false);
     setTransition({ project, rect, expanding: false });
     requestAnimationFrame(() => requestAnimationFrame(() => setTransition((current) => current ? { ...current, expanding: true } : null)));
     window.setTimeout(() => {
@@ -87,7 +93,7 @@ export default function Home() {
   return (
     <main className="site-shell">
       <RippleField />
-      <div ref={cursorRef} aria-hidden="true" className="cursor-orb">VIEW</div>
+      <ProjectCurveField />
       <div ref={scrollIndicatorRef} aria-hidden="true" className="scroll-indicator">
         <span ref={scrollThumbRef} />
       </div>
@@ -126,7 +132,7 @@ export default function Home() {
         <div id="project-grid" className="project-grid">
           {visibleProjects.map((project) => {
             const projectIndex = projects.findIndex((item) => item.title === project.title);
-            return <ProjectCard key={project.title} project={project} index={projectIndex} onOpen={openProject} onHover={setCursorActive} />;
+            return <ProjectCard key={project.title} project={project} index={projectIndex} onOpen={openProject} />;
           })}
         </div>
       </section>

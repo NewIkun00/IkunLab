@@ -107,7 +107,7 @@ export default function Home() {
       </section>
 
       <section id="work" className="work-section">
-        <div className="section-heading"><div><span className="eyebrow">SELECTED WORK / 2022—26</span><h2>作品案例</h2></div><p>A SELECTION OF DIGITAL EXPERIENCES, IDENTITIES AND EXPERIMENTS CREATED FOR CURIOUS PEOPLE AND AMBITIOUS TEAMS.</p></div>
+        <div className="section-heading"><div><span className="eyebrow">SELECTED WORK / 2022—26</span><h2>作品案例</h2></div><p>只因你太美，Because You Are So Beautiful</p></div>
         <div className="work-tabs" role="tablist" aria-label="作品分类">
           {workCategories.map((category) => (
             <button

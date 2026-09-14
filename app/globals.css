@@ -31,7 +31,7 @@ button { border:0; background:none; cursor:pointer; }
 .work-section { width:90vw; margin:0 auto; padding:10vw 0 13vw; }
 .section-heading { display:flex; justify-content:space-between; align-items:end; padding-bottom:4vw; border-bottom:1px solid var(--line); }
 .section-heading h2 { font-size:clamp(4rem,9vw,10rem); letter-spacing:-.07em; line-height:.8; font-weight:450; margin:3vw 0 0; }
-.section-heading>p { width:min(430px,34vw); font:.7rem/1.45 var(--font-mono); }
+.section-heading>p { width:min(520px,40vw); margin:0 0 0 auto; text-align:right; font:.95rem/1.55 var(--font-mono); opacity:.6; }
 .work-tabs { display:flex; flex-wrap:wrap; gap:8px; padding-top:24px; }
 .work-tabs button { min-height:40px; padding:0 17px; border:1px solid var(--line); border-radius:999px; color:rgba(11,11,13,.68); background:rgba(240,241,250,.48); font:500 .82rem/1 var(--font-sans); letter-spacing:.01em; white-space:nowrap; transition:color .2s ease,background-color .2s ease,border-color .2s ease,transform .2s ease; }
 .work-tabs button:hover { color:var(--ink); border-color:rgba(11,11,13,.48); transform:translateY(-1px); }

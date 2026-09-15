@@ -5,16 +5,22 @@ import * as THREE from 'three';
 
 const vertexShader = `
   uniform float uStrength;
+  uniform vec2 uAnchorUv;
   varying vec2 vUv;
   void main() {
     vUv = uv;
     vec4 clipPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vec2 screenUv = clipPosition.xy * 0.5 + 0.5;
     float verticalArc = 1.0 - sin(clamp(screenUv.y, 0.0, 1.0) * 3.14159265);
+    float anchorArc = 1.0 - sin(clamp(uAnchorUv.y, 0.0, 1.0) * 3.14159265);
 
     // Every card is bent by the same screen-space function. The subdivided
     // plane makes its outer edges follow the curve instead of staying flat.
-    clipPosition.x += (screenUv.x - 0.5) * verticalArc * uStrength * 1.55;
+    // Pin the image's bottom centre to its DOM card. Only the surface bends;
+    // the image frame can no longer drift away from its title and metadata.
+    float surfaceCurve = (screenUv.x - 0.5) * verticalArc;
+    float anchorCurve = (uAnchorUv.x - 0.5) * anchorArc;
+    clipPosition.x += (surfaceCurve - anchorCurve) * uStrength * 1.55;
 
     gl_Position = clipPosition;
   }
@@ -28,6 +34,7 @@ const fragmentShader = `
   uniform vec2 uRectSize;
   uniform vec2 uObjectPosition;
   uniform vec2 uResolution;
+  uniform vec2 uAnchorUv;
   uniform float uStrength;
   uniform float uRadius;
   uniform float uImageScale;
@@ -80,33 +87,36 @@ const fragmentShader = `
   void main() {
     vec2 screenUv = gl_FragCoord.xy / uResolution;
     float verticalArc = 1.0 - sin(clamp(screenUv.y, 0.0, 1.0) * 3.14159265);
+    float anchorArc = 1.0 - sin(clamp(uAnchorUv.y, 0.0, 1.0) * 3.14159265);
     vec2 warpedUv = vUv;
     // A smaller inverse sampling shift adds cylindrical depth while the
     // vertex shader is responsible for the actual shared surface silhouette.
-    warpedUv.x -= (screenUv.x - 0.5) * verticalArc * uStrength * 0.32;
+    float surfaceCurve = (screenUv.x - 0.5) * verticalArc;
+    float anchorCurve = (uAnchorUv.x - 0.5) * anchorArc;
+    warpedUv.x -= (surfaceCurve - anchorCurve) * uStrength * 0.32;
 
     // Match the oversized, scaled DOM image underneath so handing rendering
     // back at rest does not produce a one-frame crop/position jump.
     vec2 surfaceUv = warpedUv;
     vec2 baseTextureUv = coverUv(surfaceUv);
 
-    // Keep the card plane and rounded frame rigid. The far background receives
-    // only a trace of movement; foreground and its feathered silhouette halo
-    // carry almost the full offset so the edge does not split into two copies.
-    vec2 viewOffset = vec2(-uFocusPos.x, uFocusPos.y) * uHover * vec2(0.0119, 0.00875);
-    vec2 wakeOffset = uWakeOffset * uDof * 0.00315;
-    vec2 totalOffset = viewOffset + wakeOffset;
-    float depthField = softDepthField(baseTextureUv);
-    float motionWeight = 0.06 + depthField * 0.88;
-    vec2 safeUv = clamp(baseTextureUv - totalOffset * motionWeight, 0.002, 0.998);
-    float depth = texture2D(uDepthTexture, safeUv).r;
-
-    // Sample a prefiltered mip level instead of mixing displaced copies of
-    // the image. This produces a continuous optical softness with no repeated
-    // silhouettes or depth-edge trails.
-    float focusDepth = 0.78;
-    float depthDefocus = smoothstep(0.08, 0.72, abs(depth - focusDepth));
-    float mipBias = uDof * (1.35 + depthDefocus * 2.25);
+    vec2 safeUv = baseTextureUv;
+    float mipBias = 0.0;
+    // Scrolling does not need the depth pass. Keeping the expensive nine-tap
+    // depth field behind a uniform branch preserves the hover interaction but
+    // makes the ordinary gallery scroll a single colour-texture sample.
+    if (uHover > 0.001 || uDof > 0.001) {
+      vec2 viewOffset = vec2(-uFocusPos.x, uFocusPos.y) * uHover * vec2(0.0119, 0.00875);
+      vec2 wakeOffset = uWakeOffset * uDof * 0.00315;
+      vec2 totalOffset = viewOffset + wakeOffset;
+      float depthField = softDepthField(baseTextureUv);
+      float motionWeight = 0.06 + depthField * 0.88;
+      safeUv = clamp(baseTextureUv - totalOffset * motionWeight, 0.002, 0.998);
+      float depth = texture2D(uDepthTexture, safeUv).r;
+      float focusDepth = 0.78;
+      float depthDefocus = smoothstep(0.08, 0.72, abs(depth - focusDepth));
+      mipBias = uDof * (1.35 + depthDefocus * 2.25);
+    }
     vec4 color = texture2D(uTexture, safeUv, mipBias);
     vec2 localPoint = (surfaceUv - 0.5) * uRectSize;
     float distanceToEdge = roundedBox(localPoint, uRectSize * 0.5, uRadius);
@@ -118,6 +128,7 @@ const fragmentShader = `
 
 type CurveEntry = {
   element: HTMLElement;
+  card: HTMLElement;
   mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
   pointer: THREE.Vector2;
   pointerVelocity: THREE.Vector2;
@@ -129,6 +140,8 @@ type CurveEntry = {
   focusProgress: number;
   focusDuration: number;
   focusPulses: number;
+  entranceProgress: number;
+  entranceActive: boolean;
 };
 
 const parseObjectPosition = (value: string) => {
@@ -152,6 +165,7 @@ export function ProjectCurveField() {
     const canvas = canvasRef.current;
     const grid = document.querySelector<HTMLElement>('#project-grid');
     if (!canvas || !grid) return;
+    const supportsHover = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, premultipliedAlpha: true });
     renderer.setClearColor(0x000000, 0);
@@ -165,18 +179,25 @@ export function ProjectCurveField() {
     let width = innerWidth;
     let height = innerHeight;
     let lastScrollY = scrollY;
+    let lastScrollTime = performance.now();
     let motion = 0;
     let targetMotion = 0;
     let frame = 0;
     let needsSync = true;
     let lastFrameTime = performance.now();
+    let pointerClientX = Number.NEGATIVE_INFINITY;
+    let pointerClientY = Number.NEGATIVE_INFINITY;
+    const renderResolution = new THREE.Vector2();
 
     const resize = () => {
       width = innerWidth;
       height = innerHeight;
-      const pixelRatio = Math.min(devicePixelRatio, 1.25);
+      const desiredPixelRatio = Math.min(devicePixelRatio, 1.25);
+      const pixelBudgetRatio = Math.sqrt((2560 * 1440) / Math.max(1, width * height));
+      const pixelRatio = Math.max(.75, Math.min(desiredPixelRatio, pixelBudgetRatio));
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
+      renderResolution.set(renderer.domElement.width, renderer.domElement.height);
       camera.left = 0;
       camera.right = width;
       camera.top = height;
@@ -200,6 +221,8 @@ export function ProjectCurveField() {
       grid.querySelectorAll<HTMLElement>('.project-image').forEach((element) => {
         const image = element.querySelector<HTMLImageElement>('img');
         if (!image) return;
+        const card = element.closest<HTMLElement>('.project-card');
+        if (!card) return;
         let texture = textureCache.get(image.currentSrc || image.src);
         if (!texture) {
           texture = new THREE.Texture(image);
@@ -237,6 +260,7 @@ export function ProjectCurveField() {
             uRectSize: { value: new THREE.Vector2(1, 1) },
             uObjectPosition: { value: parseObjectPosition(getComputedStyle(image).objectPosition) },
             uResolution: { value: new THREE.Vector2(renderer.domElement.width, renderer.domElement.height) },
+            uAnchorUv: { value: new THREE.Vector2(.5, .5) },
             uStrength: { value: 0 },
             uRadius: { value: 12 },
             uImageScale: { value: 1.08 },
@@ -251,6 +275,7 @@ export function ProjectCurveField() {
         scene.add(mesh);
         entries.push({
           element,
+          card,
           mesh,
           pointer: new THREE.Vector2(),
           pointerVelocity: new THREE.Vector2(),
@@ -262,9 +287,40 @@ export function ProjectCurveField() {
           focusProgress: 1,
           focusDuration: .34,
           focusPulses: 1,
+          entranceProgress: 1,
+          entranceActive: false,
         });
       });
       needsSync = false;
+    };
+
+    const updateEntryHover = (
+      entry: CurveEntry,
+      rect: DOMRect,
+      isHovered: boolean,
+    ) => {
+      if (isHovered) {
+        entry.targetPointer.set(
+          Math.max(-1, Math.min(1, ((pointerClientX - rect.left) / rect.width - .5) * 2)),
+          Math.max(-1, Math.min(1, ((pointerClientY - rect.top) / rect.height - .5) * 2)),
+        );
+        if (entry.targetHover === 0) {
+          entry.focusProgress = 0;
+          entry.focusDuration = .68;
+          entry.focusPulses = 2;
+          const wakeAngle = Math.random() * Math.PI * 2;
+          entry.wakeOffset.set(Math.cos(wakeAngle), Math.sin(wakeAngle)).multiplyScalar(.56);
+        }
+        entry.targetHover = 1;
+      } else {
+        if (entry.targetHover > 0) {
+          entry.focusProgress = 0;
+          entry.focusDuration = .15;
+          entry.focusPulses = 1;
+        }
+        entry.targetHover = 0;
+        entry.targetPointer.set(0, 0);
+      }
     };
 
     const render = (now = performance.now()) => {
@@ -274,20 +330,49 @@ export function ProjectCurveField() {
       lastFrameTime = now;
       motion += (targetMotion - motion) * .24;
       targetMotion *= .72;
-      const strength = Math.max(-.108, Math.min(.108, motion * .00465));
-      const resolution = new THREE.Vector2(renderer.domElement.width, renderer.domElement.height);
+      const strength = Math.max(-.0756, Math.min(.0756, motion * .00465));
+      const resolution = renderResolution;
+      const columnCount = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length);
       let interactionAnimating = false;
-      entries.forEach((entry) => {
-        const { element, mesh } = entry;
+      entries.forEach((entry, entryIndex) => {
+        const { element, card, mesh } = entry;
         const rect = element.getBoundingClientRect();
-        const card = element.closest<HTMLElement>('.project-card');
+        const visualInView = card.classList.contains('visual-in-view');
+        if (!visualInView) entry.entranceActive = false;
         const visible = rect.bottom > -40 && rect.top < height + 40;
         mesh.visible = visible;
         if (!visible) return;
+        if (visualInView && !entry.entranceActive) {
+          entry.entranceActive = true;
+          entry.entranceProgress = 0;
+        }
+        if (entry.entranceActive && entry.entranceProgress < 1) {
+          entry.entranceProgress = Math.min(1, entry.entranceProgress + deltaTime / 1.35);
+        }
+        const entranceEase = entry.entranceActive
+          ? 1 - Math.pow(2, -10 * entry.entranceProgress)
+          : 1;
+        const entranceScaleEase = entry.entranceActive
+          ? 1 - Math.pow(1 - entry.entranceProgress, 3)
+          : 1;
+        const entranceScale = .7 + entranceScaleEase * .3;
+        const pointerIsInside =
+          supportsHover &&
+          pointerClientX >= rect.left && pointerClientX <= rect.right &&
+          pointerClientY >= rect.top && pointerClientY <= rect.bottom;
+        updateEntryHover(entry, rect, pointerIsInside);
         mesh.position.set(rect.left + rect.width * .5, height - rect.top - rect.height * .5, 0);
-        mesh.scale.set(rect.width, rect.height, 1);
+        const columnPosition = entryIndex % columnCount;
+        const rowCenter = (columnCount - 1) * .5;
+        const entranceSide = rowCenter > 0 ? (columnPosition - rowCenter) / rowCenter : 0;
+        mesh.rotation.z = (1 - entranceEase) * entranceSide * .012;
+        mesh.scale.set(rect.width * entranceScale, rect.height * entranceScale, 1);
         mesh.material.uniforms.uRectSize.value.set(rect.width, rect.height);
         mesh.material.uniforms.uResolution.value.copy(resolution);
+        mesh.material.uniforms.uAnchorUv.value.set(
+          (rect.left + rect.width * .5) / width,
+          1 - rect.bottom / height,
+        );
         mesh.material.uniforms.uStrength.value = strength;
         const pointerFrequency = 1.35;
         const pointerOmega = Math.PI * 2 * pointerFrequency;
@@ -315,16 +400,14 @@ export function ProjectCurveField() {
             focusBlur = Math.pow(Math.sin(entry.focusProgress * Math.PI), .7);
           }
         }
-        mesh.material.uniforms.uImageScale.value = 1.075 - hoverRatio * .0125;
+        mesh.material.uniforms.uImageScale.value = 1.075 - hoverRatio * .0125 + (1 - entranceEase) * .015;
         mesh.material.uniforms.uFocusPos.value.copy(entry.pointer);
         mesh.material.uniforms.uWakeOffset.value.copy(entry.wakeOffset);
         mesh.material.uniforms.uHover.value = hoverRatio;
         mesh.material.uniforms.uDof.value = focusBlur * (.35 + hoverRatio * .65);
-        mesh.material.uniforms.uOpacity.value = card ? Number.parseFloat(getComputedStyle(card).opacity) : 1;
-        if (card) {
-          card.style.setProperty('--card-hover', hoverRatio.toFixed(4));
-          card.style.setProperty('--card-arrow-width', `${hoverRatio * Math.min(92, Math.max(48, rect.width * .11))}px`);
-        }
+        mesh.material.uniforms.uOpacity.value = entry.entranceActive && entry.entranceProgress < 1
+          ? Number.parseFloat(getComputedStyle(card).opacity)
+          : 1;
         const image = element.querySelector<HTMLImageElement>('img');
         if (image?.naturalWidth && image.naturalHeight) {
           mesh.material.uniforms.uTextureSize.value.set(image.naturalWidth, image.naturalHeight);
@@ -335,7 +418,8 @@ export function ProjectCurveField() {
           entry.pointer.distanceTo(entry.targetPointer) > .001 ||
           entry.pointerVelocity.lengthSq() > .00001 ||
           entry.wakeOffset.lengthSq() > .00001 ||
-          entry.focusProgress < 1
+          entry.focusProgress < 1 ||
+          (entry.entranceActive && entry.entranceProgress < 1)
         ) interactionAnimating = true;
       });
       renderer.clear();
@@ -353,48 +437,33 @@ export function ProjectCurveField() {
     const onScroll = () => {
       const nextScrollY = scrollY;
       const delta = nextScrollY - lastScrollY;
+      const now = performance.now();
+      const elapsedSeconds = Math.max(.016, (now - lastScrollTime) / 1000);
       lastScrollY = nextScrollY;
+      lastScrollTime = now;
       const rect = grid.getBoundingClientRect();
       if (rect.bottom > -height * .25 && rect.top < height * 1.25) {
-        targetMotion = Math.max(-38, Math.min(38, delta));
+        // Both scroll directions bend the gallery toward the same side. The
+        // deformation follows actual scroll velocity: a careful scroll stays
+        // almost flat while a fast gesture can still reach the existing cap.
+        const scrollSpeed = Math.abs(delta) / elapsedSeconds;
+        const speedRatio = Math.min(1, scrollSpeed / 5000);
+        const velocityDrivenMotion = 38 * Math.pow(speedRatio, .82);
+        targetMotion = Math.max(targetMotion * .35, velocityDrivenMotion);
         if (!frame) frame = requestAnimationFrame(render);
       }
     };
 
     const onPointerMove = (event: PointerEvent) => {
-      const target = event.target as Element | null;
-      const hoveredCard = target?.closest<HTMLElement>('.project-card') ?? null;
-      entries.forEach((entry) => {
-        const card = entry.element.closest<HTMLElement>('.project-card');
-        const isHovered = card === hoveredCard && entry.element.contains(target);
-        if (isHovered) {
-          const rect = entry.element.getBoundingClientRect();
-          entry.targetPointer.set(
-            Math.max(-1, Math.min(1, ((event.clientX - rect.left) / rect.width - .5) * 2)),
-            Math.max(-1, Math.min(1, ((event.clientY - rect.top) / rect.height - .5) * 2)),
-          );
-          if (entry.targetHover === 0) {
-            entry.focusProgress = 0;
-            entry.focusDuration = .68;
-            entry.focusPulses = 2;
-            const wakeAngle = Math.random() * Math.PI * 2;
-            entry.wakeOffset.set(Math.cos(wakeAngle), Math.sin(wakeAngle)).multiplyScalar(.56);
-          }
-          entry.targetHover = 1;
-        } else {
-          if (entry.targetHover > 0) {
-            entry.focusProgress = 0;
-            entry.focusDuration = .15;
-            entry.focusPulses = 1;
-          }
-          entry.targetHover = 0;
-          entry.targetPointer.set(0, 0);
-        }
-      });
+      if (!supportsHover) return;
+      pointerClientX = event.clientX;
+      pointerClientY = event.clientY;
       if (!frame) frame = requestAnimationFrame(render);
     };
 
     const onPointerLeave = () => {
+      pointerClientX = Number.NEGATIVE_INFINITY;
+      pointerClientY = Number.NEGATIVE_INFINITY;
       entries.forEach((entry) => {
         if (entry.targetHover > 0) {
           entry.focusProgress = 0;
@@ -411,7 +480,11 @@ export function ProjectCurveField() {
       needsSync = true;
       if (!frame) frame = requestAnimationFrame(render);
     });
-    observer.observe(grid, { childList: true, subtree: true });
+    // Only resync when cards are added to or removed from the grid (for
+    // example by the category filter). Text reveal animations update nested
+    // text nodes; observing the whole subtree made those harmless updates
+    // recreate every mesh and restart every 70% -> 100% entrance animation.
+    observer.observe(grid, { childList: true });
     resize();
     syncEntries();
     render();
@@ -427,11 +500,6 @@ export function ProjectCurveField() {
       removeEventListener('scroll', onScroll);
       removeEventListener('pointermove', onPointerMove);
       document.documentElement.removeEventListener('pointerleave', onPointerLeave);
-      entries.forEach(({ element }) => {
-        const card = element.closest<HTMLElement>('.project-card');
-        card?.style.removeProperty('--card-hover');
-        card?.style.removeProperty('--card-arrow-width');
-      });
       clearEntries();
       textureCache.forEach((texture) => texture.dispose());
       renderer.dispose();
@@ -440,3 +508,4 @@ export function ProjectCurveField() {
 
   return <canvas ref={canvasRef} className="project-curve-field" aria-hidden="true" />;
 }
+

@@ -67,7 +67,16 @@ export function LiquidMetalButton({ href, children }: LiquidMetalButtonProps) {
   }, [ready, text]);
 
   return (
-    <div className="liquid-metal-button" data-ready={ready || undefined}>
+    <div
+      className="liquid-metal-button"
+      data-ready={ready || undefined}
+      onClick={() => {
+        if (!ready) document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+      }}
+    >
+      <span className="liquid-metal-button__fallback" aria-hidden="true">
+        {children}
+      </span>
       <iframe
         ref={frameRef}
         className="liquid-metal-button__frame"
@@ -83,3 +92,4 @@ export function LiquidMetalButton({ href, children }: LiquidMetalButtonProps) {
     </div>
   );
 }
+

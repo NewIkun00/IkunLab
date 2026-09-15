@@ -32,12 +32,25 @@ const projects: Project[] = projectData.map((project) => ({
 const workCategories = ['全部', '用户体验', '数字孪生', 'AI设计工程', '3D美术视觉品牌', '独立开发者'] as const;
 type WorkCategory = '全部' | ProjectCategory;
 const detailSections = [
-  { id: 'case-home', label: '首页' },
-  { id: 'case-research', label: '用户研究' },
-  { id: 'case-analysis', label: '分析' },
-  { id: 'case-conclusion', label: '设计结论' },
-  { id: 'case-result', label: '设计结果' },
+  { id: 'case-home', label: '首页', image: null, alt: '项目封面' },
+  { id: 'case-research', label: '用户研究', image: '/images/project-parallax-depth.png', alt: '用户研究视觉' },
+  { id: 'case-analysis', label: '分析', image: '/images/project-parallax-color.png', alt: '项目分析视觉' },
+  { id: 'case-conclusion', label: '设计结论', image: '/images/hero-forms.png', alt: '设计结论视觉' },
+  { id: 'case-result', label: '设计结果', image: '/images/project-glass.png', alt: '设计结果视觉' },
 ] as const;
+
+function DetailMedia({ src, alt }: { src: string; alt: string }) {
+  const isVideo = /\.(mp4|webm|mov)$/i.test(src);
+  return (
+    <div className="detail-media-frame" data-detail-media>
+      {isVideo ? (
+        <video src={src} aria-label={alt} autoPlay muted loop playsInline />
+      ) : (
+        <img src={src} alt={alt} />
+      )}
+    </div>
+  );
+}
 
 function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
   return (
@@ -61,6 +74,9 @@ function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
 }
 
 export default function Home() {
+  const detailRef = useRef<HTMLElement>(null);
+  const workSectionRef = useRef<HTMLElement>(null);
+  const tabsStickyRef = useRef<HTMLDivElement>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement>(null);
   const scrollThumbRef = useRef<HTMLSpanElement>(null);
   const scrollIdleTimerRef = useRef<number | null>(null);
@@ -68,14 +84,48 @@ export default function Home() {
   const [detail, setDetail] = useState<Project | null>(null);
   const [activeDetailSection, setActiveDetailSection] = useState('case-home');
   const [activeCategory, setActiveCategory] = useState<WorkCategory>('全部');
+  const [tabsPinned, setTabsPinned] = useState(false);
   const visibleProjects = activeCategory === '全部'
     ? projects
     : projects.filter((project) => project.categories.includes(activeCategory));
+  const relatedProjects = detail
+    ? projects
+      .filter((project) => project.title !== detail.title && project.categories.some((category) => detail.categories.includes(category)))
+      .slice(0, 3)
+    : [];
+
+  useEffect(() => {
+    let frame = 0;
+    const updateTabsPosition = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const workSection = workSectionRef.current;
+        const stickyRegion = tabsStickyRef.current;
+        if (!workSection || !stickyRegion) return;
+        const stickyRect = stickyRegion.getBoundingClientRect();
+        const workRect = workSection.getBoundingClientRect();
+        const nextPinned = stickyRect.top <= 16 && workRect.bottom > stickyRect.height + 32;
+        setTabsPinned((current) => current === nextPinned ? current : nextPinned);
+      });
+    };
+    updateTabsPosition();
+    window.addEventListener('scroll', updateTabsPosition, { passive: true });
+    window.addEventListener('resize', updateTabsPosition);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', updateTabsPosition);
+      window.removeEventListener('resize', updateTabsPosition);
+    };
+  }, []);
 
   useEffect(() => {
     const updateScrollIndicator = () => {
-      const scrollRange = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      const progress = Math.min(Math.max(window.scrollY / scrollRange, 0), 1);
+      const detailRoot = detailRef.current;
+      const scrollTop = detailRoot ? detailRoot.scrollTop : window.scrollY;
+      const scrollHeight = detailRoot ? detailRoot.scrollHeight : document.documentElement.scrollHeight;
+      const clientHeight = detailRoot ? detailRoot.clientHeight : window.innerHeight;
+      const scrollRange = Math.max(scrollHeight - clientHeight, 1);
+      const progress = Math.min(Math.max(scrollTop / scrollRange, 0), 1);
       const track = scrollIndicatorRef.current;
       const thumb = scrollThumbRef.current;
       if (track && thumb) {
@@ -94,15 +144,16 @@ export default function Home() {
         scrollIndicatorRef.current?.classList.remove('is-visible');
       }, 1050);
     };
+    const scrollTarget: Window | HTMLElement = detailRef.current ?? window;
     updateScrollIndicator();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('wheel', onWheel, { passive: true });
+    scrollTarget.addEventListener('scroll', onScroll, { passive: true });
+    scrollTarget.addEventListener('wheel', onWheel, { passive: true });
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('wheel', onWheel);
+      scrollTarget.removeEventListener('scroll', onScroll);
+      scrollTarget.removeEventListener('wheel', onWheel);
       if (scrollIdleTimerRef.current !== null) window.clearTimeout(scrollIdleTimerRef.current);
     };
-  }, []);
+  }, [detail]);
 
   useEffect(() => {
     if (!detail) return;
@@ -119,7 +170,17 @@ export default function Home() {
       if (visible) setActiveDetailSection(visible.target.id);
     }, { root, rootMargin: '-22% 0px -58% 0px', threshold: [0, .15, .35, .6] });
     sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+
+    const mediaObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        entry.target.classList.toggle('is-visible', entry.isIntersecting);
+      });
+    }, { root, rootMargin: '0px 0px -8% 0px', threshold: .12 });
+    root.querySelectorAll<HTMLElement>('[data-detail-media]').forEach((media) => mediaObserver.observe(media));
+    return () => {
+      observer.disconnect();
+      mediaObserver.disconnect();
+    };
   }, [detail]);
 
   useEffect(() => {
@@ -142,6 +203,7 @@ export default function Home() {
       setDetail(project);
       setTransition(null);
       document.body.style.overflow = 'hidden';
+      window.requestAnimationFrame(() => detailRef.current?.scrollTo({ top: 0 }));
     }, 820);
   };
 
@@ -159,9 +221,9 @@ export default function Home() {
 
   return (
     <main className="site-shell">
-      <RippleField />
+      {!detail && <RippleField />}
       <ProjectCurveField />
-      <div ref={scrollIndicatorRef} aria-hidden="true" className="scroll-indicator">
+      <div ref={scrollIndicatorRef} aria-hidden="true" className={`scroll-indicator${detail ? ' is-detail' : ''}`}>
         <span ref={scrollThumbRef} />
       </div>
 
@@ -179,22 +241,24 @@ export default function Home() {
         <button className="scroll-cue" onClick={() => document.querySelector('#work')?.scrollIntoView({ behavior: 'smooth' })}><Plus size={18} /><span>继续下潜，查看作品案例</span><Plus size={18} /></button>
       </section>
 
-      <section id="work" className="work-section">
+      <section ref={workSectionRef} id="work" className="work-section">
         <div className="section-heading"><div><span className="eyebrow"><RevealText text="SELECTED WORK / 2022—26" /></span><h2><RevealText text="作品案例" delay={120} /></h2></div><p><RevealText text="只因你太美，Because You Are So Beautiful" delay={240} /></p></div>
-        <div className="work-tabs" role="tablist" aria-label="作品分类">
-          {workCategories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              role="tab"
-              aria-selected={activeCategory === category}
-              aria-controls="project-grid"
-              className={activeCategory === category ? 'is-active' : ''}
-              onClick={() => setActiveCategory(category)}
-            >
-              {category}
-            </button>
-          ))}
+        <div ref={tabsStickyRef} className={`work-tabs-sticky${tabsPinned ? ' is-pinned' : ''}`}>
+          <div className="work-tabs" role="tablist" aria-label="作品分类">
+            {workCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                role="tab"
+                aria-selected={activeCategory === category}
+                aria-controls="project-grid"
+                className={activeCategory === category ? 'is-active' : ''}
+                onClick={() => setActiveCategory(category)}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
         <div id="project-grid" className="project-grid">
           {visibleProjects.map((project) => {
@@ -208,7 +272,7 @@ export default function Home() {
 
       {transition && <div className={`project-transition ${transition.expanding ? 'is-expanding' : ''}`} style={{ '--from-x': `${transition.rect.left}px`, '--from-y': `${transition.rect.top}px`, '--from-w': `${transition.rect.width}px`, '--from-h': `${transition.rect.height}px`, '--transition-image': `url(${transition.project.image})` } as React.CSSProperties} />}
       {detail && (
-        <aside className="project-detail" aria-label={`${detail.title} 作品详情`}>
+        <aside ref={detailRef} className="project-detail" aria-label={`${detail.title} 作品详情`}>
           <button className="project-detail-home" type="button" onClick={returnHome}>
             <ArrowLeft aria-hidden="true" />
             <span>返回首页</span>
@@ -229,30 +293,29 @@ export default function Home() {
               ))}
             </nav>
             <article className="detail-content">
-              <section id="case-home" className="detail-hero-section">
-                <p>{detail.tags}</p>
-                <h1>{detail.title}</h1>
-                <div className="detail-media"><img src={detail.image} alt={`${detail.title} 项目封面`} /></div>
-              </section>
-              <section id="case-research" className="detail-case-section">
-                <header><span>01</span><h2>用户研究</h2></header>
-                <p className="detail-lead">从真实使用情境出发，梳理目标用户、关键任务与体验阻力，让设计决策建立在可被理解的行为路径之上。</p>
-                <div className="detail-insight-grid"><p>目标用户<br /><strong>角色与需求</strong></p><p>核心场景<br /><strong>任务与触点</strong></p><p>体验机会<br /><strong>问题与优先级</strong></p></div>
-              </section>
-              <section id="case-analysis" className="detail-case-section">
-                <header><span>02</span><h2>分析</h2></header>
-                <p className="detail-lead">将调研信息转化为结构化洞察，识别流程、信息与交互之间的关键关系，并建立后续设计的判断依据。</p>
-                <div className="detail-case-visual detail-case-visual-analysis"><img src={detail.image} alt="项目分析视觉" /></div>
-              </section>
-              <section id="case-conclusion" className="detail-case-section">
-                <header><span>03</span><h2>设计结论</h2></header>
-                <div className="detail-conclusions"><p>让复杂信息保持清晰。</p><p>让关键操作自然发生。</p><p>让视觉语言服务于体验。</p></div>
-              </section>
-              <section id="case-result" className="detail-case-section detail-result-section">
-                <header><span>04</span><h2>设计结果</h2></header>
-                <p className="detail-lead">以一致的视觉系统、流畅的交互节奏与可落地的实现方式，形成完整的数字产品体验。</p>
-                <div className="detail-case-visual detail-case-visual-result"><img src={detail.image} alt="项目设计结果" /></div>
-              </section>
+              {detailSections.map((section) => (
+                <section key={section.id} id={section.id} className="detail-media-section">
+                  <DetailMedia
+                    src={section.image ?? detail.image}
+                    alt={`${detail.title} ${section.alt}`}
+                  />
+                </section>
+              ))}
+              {relatedProjects.length > 0 && (
+                <section className="detail-related" aria-labelledby="related-projects-title">
+                  <div className="detail-related-heading">
+                    <p>MORE IN THIS FIELD</p>
+                    <h2 id="related-projects-title">更多同类作品</h2>
+                    <span>{detail.categories.join(' · ')}</span>
+                  </div>
+                  <div className="detail-related-grid">
+                    {relatedProjects.map((project) => {
+                      const projectIndex = projects.findIndex((item) => item.title === project.title);
+                      return <ProjectCard key={project.title} project={project} index={projectIndex} onOpen={openProject} />;
+                    })}
+                  </div>
+                </section>
+              )}
             </article>
           </div>
         </aside>

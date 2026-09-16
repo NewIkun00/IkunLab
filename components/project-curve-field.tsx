@@ -51,9 +51,8 @@ const fragmentShader = `
   }
 
   vec2 coverUv(vec2 localUv) {
-    vec2 imageBoxSize = uRectSize + vec2(72.0, 60.0);
-    vec2 sampleUv = 0.5 + (localUv - 0.5) * uRectSize / (imageBoxSize * uImageScale);
-    float rectAspect = imageBoxSize.x / max(imageBoxSize.y, 1.0);
+    vec2 sampleUv = 0.5 + (localUv - 0.5) / max(uImageScale, 1.0);
+    float rectAspect = uRectSize.x / max(uRectSize.y, 1.0);
     float textureAspect = uTextureSize.x / max(uTextureSize.y, 1.0);
     if (textureAspect > rectAspect) {
       float visibleWidth = rectAspect / textureAspect;
@@ -263,7 +262,7 @@ export function ProjectCurveField() {
             uAnchorUv: { value: new THREE.Vector2(.5, .5) },
             uStrength: { value: 0 },
             uRadius: { value: 12 },
-            uImageScale: { value: 1.08 },
+            uImageScale: { value: 1.0 },
             uOpacity: { value: 1 },
             uFocusPos: { value: new THREE.Vector2() },
             uWakeOffset: { value: new THREE.Vector2() },
@@ -400,7 +399,7 @@ export function ProjectCurveField() {
             focusBlur = Math.pow(Math.sin(entry.focusProgress * Math.PI), .7);
           }
         }
-        mesh.material.uniforms.uImageScale.value = 1.075 - hoverRatio * .0125 + (1 - entranceEase) * .015;
+        mesh.material.uniforms.uImageScale.value = 1.0 + hoverRatio * .018 + (1 - entranceEase) * .025;
         mesh.material.uniforms.uFocusPos.value.copy(entry.pointer);
         mesh.material.uniforms.uWakeOffset.value.copy(entry.wakeOffset);
         mesh.material.uniforms.uHover.value = hoverRatio;

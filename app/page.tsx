@@ -9,35 +9,54 @@ import { ProjectCurveField } from '@/components/project-curve-field';
 import { RippleField } from '@/components/ripple-field';
 
 const projectData: Project[] = [
-  { title: 'Signal / 01', tags: 'ART DIRECTION • WEB • 3D', image: '/images/project-glass.png', position: 'center', categories: ['AI设计工程', '独立开发者'] },
-  { title: 'Matter Study', tags: 'INTERACTION • MOTION • CGI', image: '/images/hero-forms.png', position: '52% 45%', categories: ['3D美术视觉品牌'] },
-  { title: 'Blue Hour', tags: 'IDENTITY • DIGITAL • EXPERIENCE', image: '/images/project-glass.png', position: '72% center', categories: ['用户体验'] },
-  { title: 'Form & Flow', tags: 'CONCEPT • DESIGN • DEVELOPMENT', image: '/images/hero-forms.png', position: '28% 60%', categories: ['数字孪生'] },
-  { title: 'Spatial Signal', tags: 'UX • SYSTEM • PROTOTYPE', image: '/images/project-glass.png', position: '32% center', categories: ['用户体验', '数字孪生'] },
-  { title: 'Synthetic Nature', tags: 'GENERATIVE • MOTION • 3D', image: '/images/hero-forms.png', position: '68% 42%', categories: ['AI设计工程', '3D美术视觉品牌'] },
-  { title: 'Parallel Field', tags: 'DIGITAL TWIN • DATA • WEBGL', image: '/images/project-glass.png', position: '18% 55%', categories: ['数字孪生'] },
-  { title: 'Future Archive', tags: 'EXPERIENCE • IDENTITY • AI', image: '/images/hero-forms.png', position: '82% 58%', categories: ['用户体验', 'AI设计工程'] },
-  { title: 'Machine Poetry', tags: 'AI • CREATIVE CODE • VISUAL', image: '/images/project-glass.png', position: '58% 38%', categories: ['AI设计工程', '独立开发者'] },
-  { title: 'Living Interface', tags: 'PRODUCT • MOTION • INTERACTION', image: '/images/hero-forms.png', position: '38% 64%', categories: ['用户体验'] },
-  { title: 'Material Memory', tags: 'LOOKDEV • CGI • ART DIRECTION', image: '/images/project-glass.png', position: '78% 48%', categories: ['3D美术视觉品牌'] },
-  { title: 'Independent / 12', tags: 'DESIGN • CODE • EXPERIMENT', image: '/images/hero-forms.png', position: '22% 46%', categories: ['独立开发者'] },
+  {
+    title: '海外EMS平台APP+Web',
+    tags: '用户体验设计  ·  设计系统  ·  用户研究  ·  数据驱动设计',
+    image: '/images/projects/overseas-ems/cover-color.png',
+    depthImage: '/images/projects/overseas-ems/cover-depth.png',
+    detailImages: Array.from({ length: 11 }, (_, index) => `/images/projects/overseas-ems/${index + 1}.png`),
+    position: '50% 50%',
+    categories: ['用户体验'],
+  },
+  {
+    title: '星充车网互动V2G',
+    tags: '用户体验设计  ·  风险系统  ·  数据驱动设计  ·  千万级用户量',
+    image: '/images/projects/starcharge-v2g/cover-color.png',
+    depthImage: '/images/projects/starcharge-v2g/cover-depth.png',
+    detailImages: Array.from({ length: 13 }, (_, index) => `/images/projects/starcharge-v2g/${index + 1}.png`),
+    position: '50% 50%',
+    categories: ['用户体验'],
+  },
+  {
+    title: '星码AI · CDE平台',
+    tags: '用户体验设计  ·  Ai Coding  ·  早期产品，现已GG 交互体验思路可参考',
+    image: '/images/projects/xingma-cde/cover-color.png',
+    depthImage: '/images/projects/xingma-cde/cover-depth.png',
+    detailImages: Array.from({ length: 7 }, (_, index) => `/images/projects/xingma-cde/${index + 1}.png`),
+    position: '50% 50%',
+    categories: ['用户体验'],
+  },
 ];
 
-const projects: Project[] = projectData.map((project) => ({
-  ...project,
-  image: '/images/project-parallax-color.png',
-  position: '50% 50%',
-}));
+const projects: Project[] = projectData;
 
 const workCategories = ['全部', '用户体验', '数字孪生', 'AI设计工程', '3D美术视觉品牌', '独立开发者'] as const;
 type WorkCategory = '全部' | ProjectCategory;
-const detailSections = [
-  { id: 'case-home', label: '首页', image: null, alt: '项目封面' },
-  { id: 'case-research', label: '用户研究', image: '/images/project-parallax-depth.png', alt: '用户研究视觉' },
-  { id: 'case-analysis', label: '分析', image: '/images/project-parallax-color.png', alt: '项目分析视觉' },
-  { id: 'case-conclusion', label: '设计结论', image: '/images/hero-forms.png', alt: '设计结论视觉' },
-  { id: 'case-result', label: '设计结果', image: '/images/project-glass.png', alt: '设计结果视觉' },
+const detailSectionTemplates = [
+  { id: 'case-home', label: '首页' },
+  { id: 'case-research', label: '用户研究' },
+  { id: 'case-analysis', label: '分析' },
+  { id: 'case-conclusion', label: '设计结论' },
+  { id: 'case-result', label: '设计结果' },
 ] as const;
+
+function getDetailSections(imageCount: number) {
+  const lastImageIndex = Math.max(0, imageCount - 1);
+  return detailSectionTemplates.map((section, index) => ({
+    ...section,
+    startIndex: Math.round((lastImageIndex * index) / (detailSectionTemplates.length - 1)),
+  }));
+}
 
 function DetailMedia({ src, alt }: { src: string; alt: string }) {
   const isVideo = /\.(mp4|webm|mov)$/i.test(src);
@@ -100,6 +119,7 @@ export default function Home() {
       })
       .slice(0, 5)
     : [];
+  const currentDetailSections = detail ? getDetailSections(detail.detailImages.length) : [];
 
   useEffect(() => {
     let frame = 0;
@@ -169,7 +189,7 @@ export default function Home() {
     setActiveDetailSection('case-home');
     const root = document.querySelector<HTMLElement>('.project-detail');
     if (!root) return;
-    const sections = detailSections
+    const sections = getDetailSections(detail.detailImages.length)
       .map(({ id }) => document.getElementById(id))
       .filter((section): section is HTMLElement => Boolean(section));
     const observer = new IntersectionObserver((entries) => {
@@ -405,7 +425,7 @@ export default function Home() {
           </button>
           <div className="detail-layout">
             <nav className="detail-anchor" aria-label="作品章节导航">
-              {detailSections.map((section, index) => (
+              {currentDetailSections.map((section, index) => (
                 <button
                   key={section.id}
                   type="button"
@@ -419,14 +439,17 @@ export default function Home() {
               ))}
             </nav>
             <article className="detail-content">
-              {detailSections.map((section) => (
-                <section key={section.id} id={section.id} className="detail-media-section">
-                  <DetailMedia
-                    src={section.image ?? detail.image}
-                    alt={`${detail.title} ${section.alt}`}
-                  />
-                </section>
-              ))}
+              {detail.detailImages.map((image, index) => {
+                const section = currentDetailSections.find((item) => item.startIndex === index);
+                return (
+                  <section key={image} id={section?.id} className="detail-media-section">
+                    <DetailMedia
+                      src={image}
+                      alt={`${detail.title} 详情图 ${index + 1}`}
+                    />
+                  </section>
+                );
+              })}
               {relatedProjects.length > 0 && (
                 <section className="detail-related" aria-labelledby="related-projects-title">
                   <div className="detail-related-heading">

@@ -9,6 +9,8 @@ export type Project = {
   title: string;
   tags: string;
   image: string;
+  depthImage: string;
+  detailImages: string[];
   position: string;
   categories: ProjectCategory[];
 };
@@ -72,7 +74,7 @@ export function ProjectCard({ project, index, onOpen }: { project: Project; inde
   return (
     <button ref={cardRef} className={`project-card project-${index + 1}`} onClick={() => onOpen(project, cardRef.current!.getBoundingClientRect())}>
       <div className="project-card-body">
-        <div className="project-image" data-depth="/images/project-parallax-depth.png"><img src={project.image} alt="" style={{ objectPosition: project.position }} /></div>
+        <div className="project-image" data-depth={project.depthImage}><img src={project.image} alt="" style={{ objectPosition: project.position }} /></div>
         <div className="project-meta">
           <span ref={metaRef} className="project-meta-copy" aria-label={project.tags} />
         </div>

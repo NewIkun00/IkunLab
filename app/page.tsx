@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Maximize2, Minimize2, Plus } from 'lucide-react';
 import { PhysicsHero } from '@/components/physics-hero';
 import { LiquidMetalButton } from '@/components/liquid-metal-button';
 import { Project, ProjectCard, ProjectCategory } from '@/components/project-card';
@@ -82,16 +82,23 @@ export default function Home() {
   const scrollIdleTimerRef = useRef<number | null>(null);
   const [transition, setTransition] = useState<{ project: Project; rect: DOMRect; expanding: boolean } | null>(null);
   const [detail, setDetail] = useState<Project | null>(null);
+  const [detailFullscreen, setDetailFullscreen] = useState(false);
   const [activeDetailSection, setActiveDetailSection] = useState('case-home');
   const [activeCategory, setActiveCategory] = useState<WorkCategory>('全部');
   const [tabsPinned, setTabsPinned] = useState(false);
+  const [heroActionsVisible, setHeroActionsVisible] = useState(true);
   const visibleProjects = activeCategory === '全部'
     ? projects
     : projects.filter((project) => project.categories.includes(activeCategory));
   const relatedProjects = detail
     ? projects
-      .filter((project) => project.title !== detail.title && project.categories.some((category) => detail.categories.includes(category)))
-      .slice(0, 3)
+      .filter((project) => project.title !== detail.title)
+      .sort((projectA, projectB) => {
+        const scoreA = projectA.categories.some((category) => detail.categories.includes(category)) ? 1 : 0;
+        const scoreB = projectB.categories.some((category) => detail.categories.includes(category)) ? 1 : 0;
+        return scoreB - scoreA;
+      })
+      .slice(0, 5)
     : [];
 
   useEffect(() => {
@@ -106,6 +113,8 @@ export default function Home() {
         const workRect = workSection.getBoundingClientRect();
         const nextPinned = stickyRect.top <= 16 && workRect.bottom > stickyRect.height + 32;
         setTabsPinned((current) => current === nextPinned ? current : nextPinned);
+        const nextHeroActionsVisible = workRect.top > 0;
+        setHeroActionsVisible((current) => current === nextHeroActionsVisible ? current : nextHeroActionsVisible);
       });
     };
     updateTabsPosition();
@@ -196,6 +205,17 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const targets = Array.from(document.querySelectorAll<HTMLElement>('[data-footer-reveal]'));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        entry.target.classList.toggle('is-visible', entry.isIntersecting);
+      });
+    }, { threshold: .12, rootMargin: '0px 0px -4% 0px' });
+    targets.forEach((target) => observer.observe(target));
+    return () => observer.disconnect();
+  }, []);
+
   const openProject = (project: Project, rect: DOMRect) => {
     setTransition({ project, rect, expanding: false });
     requestAnimationFrame(() => requestAnimationFrame(() => setTransition((current) => current ? { ...current, expanding: true } : null)));
@@ -209,9 +229,26 @@ export default function Home() {
 
   const returnHome = () => {
     setDetail(null);
+    setDetailFullscreen(false);
     document.body.style.overflow = '';
     history.replaceState(null, '', '#top');
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  };
+
+  const changeCategory = (category: WorkCategory) => {
+    setActiveCategory(category);
+    if (!tabsPinned) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const stickyRegion = tabsStickyRef.current;
+      if (!stickyRegion) return;
+      let stickyStart = 0;
+      let offsetNode: HTMLElement | null = stickyRegion;
+      while (offsetNode) {
+        stickyStart += offsetNode.offsetTop;
+        offsetNode = offsetNode.offsetParent as HTMLElement | null;
+      }
+      window.scrollTo({ top: Math.max(0, stickyStart + 24), behavior: 'smooth' });
+    }));
   };
 
   const scrollToDetailSection = (id: string) => {
@@ -227,8 +264,41 @@ export default function Home() {
         <span ref={scrollThumbRef} />
       </div>
 
-      <header className="topbar">
-        <a className="wordmark" href="#top" aria-label="Back to top">Ikun LAB</a>
+      <header className={`topbar${detail ? ' is-over-detail' : ''}`}>
+        <a
+          className="wordmark"
+          href="#top"
+          aria-label="返回首页顶部"
+          onClick={(event) => {
+            if (!detail) return;
+            event.preventDefault();
+            returnHome();
+          }}
+        >
+          Ikun LAB
+        </a>
+        {!detail && (
+          <div className={`hero-social-actions${heroActionsVisible ? ' is-visible' : ''}`} aria-label="社交媒体与联系方式">
+            <div className="hero-social-item hero-wechat">
+              <button type="button" className="hero-social-action" aria-label="显示微信二维码">
+                <img src="/images/vx.svg" alt="" aria-hidden="true" />
+              </button>
+              <div className="wechat-popover" role="tooltip">
+                <img src="/images/wechat-qr.png" alt="Ikun 的微信二维码" />
+                <span>微信扫码联系</span>
+              </div>
+            </div>
+            <a
+              className="hero-social-action"
+              href="https://space.bilibili.com/364418045?spm_id_from=333.40164.0.0"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="打开 Ikun 的哔哩哔哩主页"
+            >
+              <img src="/images/bilibili.svg" alt="" aria-hidden="true" />
+            </a>
+          </div>
+        )}
       </header>
 
       <section id="top" className="hero">
@@ -253,7 +323,7 @@ export default function Home() {
                 aria-selected={activeCategory === category}
                 aria-controls="project-grid"
                 className={activeCategory === category ? 'is-active' : ''}
-                onClick={() => setActiveCategory(category)}
+                onClick={() => changeCategory(category)}
               >
                 {category}
               </button>
@@ -268,14 +338,70 @@ export default function Home() {
         </div>
       </section>
 
-      <footer><div className="footer-top"><a href="mailto:hello@yourname.com">hello@yourname.com</a><div><span>SOCIAL</span><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">Are.na</a></div><div><span>LOCATION</span><p>Shanghai / Everywhere<br />UTC +8</p></div></div><div className="footer-bottom"><span>©2026 YOUR—NAME</span><span>DESIGN + CODE WITH CARE</span><a href="#top">BACK TO TOP ↑</a></div></footer>
+      <footer id="contact" className="contact-footer">
+        <div className="contact-footer-intro" data-footer-reveal>
+          <span>CONTACT / IKUN LAB</span>
+          <h2>保持联系，<br />一起把想法做出来。</h2>
+        </div>
+
+        <a className="contact-email" href="mailto:892039651@qq.com" data-footer-reveal>
+          <span className="contact-label">EMAIL</span>
+          <span className="contact-email-address">892039651@qq.com</span>
+          <ArrowUpRight aria-hidden="true" />
+        </a>
+
+        <div className="contact-channel-grid">
+          <section className="contact-wechat" aria-labelledby="wechat-title" data-footer-reveal>
+            <div className="contact-channel-copy">
+              <span className="contact-label">WECHAT</span>
+              <h3 id="wechat-title">微信</h3>
+              <p>扫描二维码，添加我的微信</p>
+            </div>
+            <div className="contact-qr-frame">
+              <img src="/images/wechat-qr.png" alt="Ikun 的微信二维码" />
+            </div>
+          </section>
+
+          <a
+            className="contact-bilibili"
+            href="https://space.bilibili.com/364418045?spm_id_from=333.40164.0.0"
+            target="_blank"
+            rel="noreferrer"
+            data-footer-reveal
+          >
+            <div className="contact-channel-copy">
+              <span className="contact-label">BILIBILI</span>
+              <h3>哔哩哔哩</h3>
+              <p>设计、3D 与独立开发过程记录</p>
+            </div>
+            <span className="contact-external-link">
+              访问主页
+              <ArrowUpRight aria-hidden="true" />
+            </span>
+          </a>
+        </div>
+
+        <div className="contact-footer-bottom" data-footer-reveal>
+          <span>© 2026 IKUN LAB</span>
+          <a href="#top">返回顶部 ↑</a>
+        </div>
+      </footer>
 
       {transition && <div className={`project-transition ${transition.expanding ? 'is-expanding' : ''}`} style={{ '--from-x': `${transition.rect.left}px`, '--from-y': `${transition.rect.top}px`, '--from-w': `${transition.rect.width}px`, '--from-h': `${transition.rect.height}px`, '--transition-image': `url(${transition.project.image})` } as React.CSSProperties} />}
       {detail && (
-        <aside ref={detailRef} className="project-detail" aria-label={`${detail.title} 作品详情`}>
+        <aside ref={detailRef} className={`project-detail${detailFullscreen ? ' is-fullscreen' : ''}`} aria-label={`${detail.title} 作品详情`}>
           <button className="project-detail-home" type="button" onClick={returnHome}>
             <ArrowLeft aria-hidden="true" />
             <span>返回首页</span>
+          </button>
+          <button
+            className="detail-fullscreen-toggle"
+            type="button"
+            aria-pressed={detailFullscreen}
+            onClick={() => setDetailFullscreen((current) => !current)}
+          >
+            {detailFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+            <span>{detailFullscreen ? '收起' : '全屏'}</span>
           </button>
           <div className="detail-layout">
             <nav className="detail-anchor" aria-label="作品章节导航">

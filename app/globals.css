@@ -164,6 +164,7 @@ footer>* { position:relative; z-index:32; }
 .detail-related-heading span { max-width:360px; color:rgba(255,255,255,.48); font:.72rem/1.5 var(--font-mono); text-align:right; }
 .detail-related-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:clamp(10px,1.15vw,20px); }
 .detail-related .project-card { color:white; transform:translateY(54px); }
+.detail-related .project-card:hover,.detail-related .project-card:focus-visible { --card-title-hover:0; --card-title-arrow-width:0px; }
 .detail-related .project-card.in-view { transform:translateY(0); }
 .detail-related .project-image { border-radius:10px; background:#151515; }
 .detail-related .project-image img { opacity:1; }
@@ -171,7 +172,7 @@ footer>* { position:relative; z-index:32; }
 .detail-related .project-title-row { margin-top:10px; }
 .detail-related .project-title-arrow { height:clamp(1.6rem,2.2vw,2.6rem); }
 .detail-related .project-title-arrow svg { width:clamp(1.35rem,1.8vw,2.2rem); height:clamp(1.35rem,1.8vw,2.2rem); }
-.detail-related .project-card h3 { font-size:clamp(1.05rem,1.45vw,1.75rem); }
+.detail-related .project-card h3 { font-size:clamp(calc(1.05rem - 4px),calc(1.45vw - 4px),calc(1.75rem - 4px)); }
 .project-detail.is-fullscreen .project-detail-home { left:calc(5vw + 142px); min-width:132px; transform:none; opacity:1; visibility:visible; pointer-events:auto; }
 .project-detail.is-fullscreen .project-detail-home:hover { transform:scale(1.035); }
 .project-detail.is-fullscreen .detail-layout { width:100%; padding:116px 0 0; display:block; }
@@ -251,7 +252,7 @@ footer>* { position:relative; z-index:32; }
   .detail-related-grid { display:flex; gap:14px; margin-right:-18px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; }
   .detail-related-grid::-webkit-scrollbar { display:none; }
   .detail-related .project-card { min-width:min(78vw,320px); scroll-snap-align:start; }
-  .detail-related .project-card h3 { font-size:1.85rem; }
+  .detail-related .project-card h3 { font-size:calc(1.85rem - 4px); }
   .detail-fullscreen-toggle { display:none; }
 }
 @media (min-width:1601px) {

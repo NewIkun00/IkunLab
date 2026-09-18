@@ -36,6 +36,74 @@ const projectData: Project[] = [
     position: '50% 50%',
     categories: ['用户体验'],
   },
+  {
+    title: 'BC端体验升级数据增长案例',
+    tags: '用户体验设计  ·  体验迭代  ·  2个案例  ·  数据增长',
+    image: '/images/projects/bc-experience-growth/cover-color.png',
+    depthImage: '/images/projects/bc-experience-growth/cover-depth.png',
+    detailImages: Array.from({ length: 4 }, (_, index) => `/images/projects/bc-experience-growth/${index + 1}.png`),
+    position: '50% 50%',
+    categories: ['用户体验'],
+  },
+  {
+    title: 'AI语音交互产品体验',
+    tags: '用户体验设计  ·  多模态交互  ·  2个案例',
+    image: '/images/projects/ai-voice-interaction/cover-color.png',
+    depthImage: '/images/projects/ai-voice-interaction/cover-depth.png',
+    detailImages: Array.from({ length: 8 }, (_, index) => `/images/projects/ai-voice-interaction/${index + 1}.png`),
+    position: '50% 50%',
+    categories: ['用户体验'],
+  },
+  {
+    title: '文誉城VR项目全栈',
+    tags: '数字孪生全栈  ·  UI设计  ·  3D建模  ·  UE美术  ·  UE开发  ·  部署落地',
+    image: '/images/projects/wenyucheng-vr-fullstack/cover-color.png',
+    depthImage: '/images/projects/wenyucheng-vr-fullstack/cover-depth.png',
+    detailImages: [
+      '/images/projects/wenyucheng-vr-fullstack/1.png',
+      '/images/projects/wenyucheng-vr-fullstack/2.mp4',
+      '/images/projects/wenyucheng-vr-fullstack/3.png',
+      '/images/projects/wenyucheng-vr-fullstack/4.png',
+      '/images/projects/wenyucheng-vr-fullstack/5.png',
+      '/images/projects/wenyucheng-vr-fullstack/6.png',
+      '/images/projects/wenyucheng-vr-fullstack/7.png',
+      '/images/projects/wenyucheng-vr-fullstack/8.png',
+      '/images/projects/wenyucheng-vr-fullstack/9.png',
+      '/images/projects/wenyucheng-vr-fullstack/10.png',
+    ],
+    position: '50% 50%',
+    categories: ['数字孪生'],
+  },
+  {
+    title: '西伏河项目全栈',
+    tags: '数字孪生全栈  ·  UI设计  ·  3D建模  ·  UE美术  ·  UE开发  ·  部署落地',
+    image: '/images/projects/xifuhe-fullstack/cover-color.png',
+    depthImage: '/images/projects/xifuhe-fullstack/cover-depth.png',
+    detailImages: [
+      '/images/projects/xifuhe-fullstack/1.png',
+      '/images/projects/xifuhe-fullstack/2.mp4',
+      '/images/projects/xifuhe-fullstack/3.jpg',
+      '/images/projects/xifuhe-fullstack/4.png',
+    ],
+    position: '50% 50%',
+    categories: ['数字孪生'],
+  },
+  {
+    title: '康华医院项目全栈',
+    tags: '数字孪生全栈  ·  UI设计  ·  3D建模  ·  UE美术  ·  UE开发  ·  部署落地',
+    image: '/images/projects/kanghua-hospital-fullstack/cover-color.png',
+    depthImage: '/images/projects/kanghua-hospital-fullstack/cover-depth.png',
+    detailImages: [
+      '/images/projects/kanghua-hospital-fullstack/1.png',
+      '/images/projects/kanghua-hospital-fullstack/2.mp4',
+      '/images/projects/kanghua-hospital-fullstack/3.png',
+      '/images/projects/kanghua-hospital-fullstack/4.png',
+      '/images/projects/kanghua-hospital-fullstack/5.png',
+      '/images/projects/kanghua-hospital-fullstack/6.png',
+    ],
+    position: '50% 50%',
+    categories: ['数字孪生'],
+  },
 ];
 
 const projects: Project[] = projectData;
@@ -460,7 +528,7 @@ export default function Home() {
                   <div className="detail-related-grid">
                     {relatedProjects.map((project) => {
                       const projectIndex = projects.findIndex((item) => item.title === project.title);
-                      return <ProjectCard key={project.title} project={project} index={projectIndex} onOpen={openProject} />;
+                      return <ProjectCard key={project.title} project={project} index={projectIndex} onOpen={openProject} variant="related" />;
                     })}
                   </div>
                 </section>

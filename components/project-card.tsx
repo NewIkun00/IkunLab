@@ -15,10 +15,21 @@ export type Project = {
   categories: ProjectCategory[];
 };
 
-export function ProjectCard({ project, index, onOpen }: { project: Project; index: number; onOpen: (project: Project, rect: DOMRect) => void }) {
+export function ProjectCard({
+  project,
+  index,
+  onOpen,
+  variant = 'default',
+}: {
+  project: Project;
+  index: number;
+  onOpen: (project: Project, rect: DOMRect) => void;
+  variant?: 'default' | 'related';
+}) {
   const cardRef = useRef<HTMLButtonElement>(null);
   const metaRef = useRef<HTMLSpanElement>(null);
   const titleCharacters = Array.from(project.title);
+  const isRelated = variant === 'related';
 
   useEffect(() => {
     const card = cardRef.current;
@@ -72,14 +83,16 @@ export function ProjectCard({ project, index, onOpen }: { project: Project; inde
   }, [project.tags]);
 
   return (
-    <button ref={cardRef} className={`project-card project-${index + 1}`} onClick={() => onOpen(project, cardRef.current!.getBoundingClientRect())}>
+    <button ref={cardRef} className={`project-card project-${index + 1}${isRelated ? ' project-card-related' : ''}`} onClick={() => onOpen(project, cardRef.current!.getBoundingClientRect())}>
       <div className="project-card-body">
         <div className="project-image" data-depth={project.depthImage}><img src={project.image} alt="" style={{ objectPosition: project.position }} /></div>
-        <div className="project-meta">
-          <span ref={metaRef} className="project-meta-copy" aria-label={project.tags} />
-        </div>
+        {!isRelated && (
+          <div className="project-meta">
+            <span ref={metaRef} className="project-meta-copy" aria-label={project.tags} />
+          </div>
+        )}
         <div className="project-title-row">
-          <span className="project-title-arrow" aria-hidden="true"><ArrowUpRight /></span>
+          {!isRelated && <span className="project-title-arrow" aria-hidden="true"><ArrowUpRight /></span>}
           <h3 aria-label={project.title}>
             {titleCharacters.map((character, characterIndex) => {
               const phase = titleCharacters.length > 1

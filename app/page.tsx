@@ -104,6 +104,34 @@ const projectData: Project[] = [
     position: '50% 50%',
     categories: ['数字孪生'],
   },
+  {
+    title: '其他数字孪生项目速览',
+    tags: '数字孪生  ·  UI设计  ·  三维可视化  ·  项目速览',
+    image: '/images/projects/other-digital-twins/cover-color.png',
+    depthImage: '/images/projects/other-digital-twins/cover-depth.png',
+    detailImages: [
+      ...Array.from({ length: 10 }, (_, index) => `/images/projects/other-digital-twins/${index + 1}.png`),
+      '/images/projects/other-digital-twins/11.jpg',
+      '/images/projects/other-digital-twins/12.jpg',
+    ],
+    position: '50% 50%',
+    categories: ['数字孪生'],
+  },
+  {
+    title: '可视化UI视觉项目速览',
+    tags: '可视化UI设计  ·  数据可视化  ·  动效设计  ·  数字孪生',
+    image: '/images/projects/visualization-ui-showcase/cover-color.png',
+    depthImage: '/images/projects/visualization-ui-showcase/cover-depth.png',
+    detailImages: [
+      '/images/projects/visualization-ui-showcase/1.gif',
+      '/images/projects/visualization-ui-showcase/2.gif',
+      '/images/projects/visualization-ui-showcase/3.mp4',
+      '/images/projects/visualization-ui-showcase/4.gif',
+      ...Array.from({ length: 5 }, (_, index) => `/images/projects/visualization-ui-showcase/${index + 5}.png`),
+    ],
+    position: '50% 50%',
+    categories: ['数字孪生'],
+  },
 ];
 
 const projects: Project[] = projectData;

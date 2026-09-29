@@ -1,0 +1,2 @@
+public/images/projects/3d-modeling-rendering/*.mp4 filter=lfs diff=lfs merge=lfs -text
+public/images/projects/self-developed-3d-avatar/*.mp4 filter=lfs diff=lfs merge=lfs -text

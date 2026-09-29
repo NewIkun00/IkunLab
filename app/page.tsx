@@ -132,6 +132,46 @@ const projectData: Project[] = [
     position: '50% 50%',
     categories: ['数字孪生'],
   },
+  {
+    title: '3D建模渲染图片视频',
+    tags: '3D建模  ·  场景渲染  ·  动画视频  ·  视觉呈现',
+    image: '/images/projects/3d-modeling-rendering/cover-color.png',
+    depthImage: '/images/projects/3d-modeling-rendering/cover-depth.png',
+    detailImages: [
+      ...Array.from({ length: 4 }, (_, index) => `/images/projects/3d-modeling-rendering/${index + 1}.mp4`),
+      ...Array.from({ length: 5 }, (_, index) => `/images/projects/3d-modeling-rendering/${index + 5}.png`),
+    ],
+    position: '50% 50%',
+    categories: ['3D美术视觉品牌'],
+  },
+  {
+    title: '车网互动品牌落地',
+    tags: '品牌设计  ·  视觉系统  ·  场景落地  ·  车网互动',
+    image: '/images/projects/v2g-brand-implementation/cover-color.png',
+    depthImage: '/images/projects/v2g-brand-implementation/cover-depth.png',
+    detailImages: Array.from(
+      { length: 19 },
+      (_, index) => `/images/projects/v2g-brand-implementation/${index + 1}.png`,
+    ),
+    position: '50% 50%',
+    categories: ['3D美术视觉品牌'],
+  },
+  {
+    title: '自研3D数字人平台',
+    tags: '独立开发  ·  3D数字人  ·  实时渲染  ·  产品研发',
+    image: '/images/projects/self-developed-3d-avatar/cover-color.png',
+    depthImage: '/images/projects/self-developed-3d-avatar/cover-depth.png',
+    detailImages: [
+      '/images/projects/self-developed-3d-avatar/1.mp4',
+      '/images/projects/self-developed-3d-avatar/2.mp4',
+      '/images/projects/self-developed-3d-avatar/3.jpg',
+      '/images/projects/self-developed-3d-avatar/4.jpg',
+      '/images/projects/self-developed-3d-avatar/5.png',
+      '/images/projects/self-developed-3d-avatar/6.jpg',
+    ],
+    position: '50% 50%',
+    categories: ['独立开发者'],
+  },
 ];
 
 const projects: Project[] = projectData;

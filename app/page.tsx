@@ -172,6 +172,28 @@ const projectData: Project[] = [
     position: '50% 50%',
     categories: ['独立开发者'],
   },
+  {
+    title: 'UE5国产化WebUI方案',
+    tags: '独立开发  ·  UE5  ·  WebUI  ·  国产化方案',
+    image: '/images/projects/ue5-domestic-webui/cover-color.png',
+    depthImage: '/images/projects/ue5-domestic-webui/cover-depth.png',
+    detailImages: [
+      'https://player.bilibili.com/player.html?bvid=BV1okUpYpEN7&page=1&high_quality=1&danmaku=0',
+    ],
+    position: '50% 50%',
+    categories: ['独立开发者'],
+  },
+  {
+    title: 'Blender地图建模插件',
+    tags: '独立开发  ·  Blender  ·  地图建模  ·  效率工具',
+    image: '/images/projects/blender-map-modeling-plugin/cover-color.png',
+    depthImage: '/images/projects/blender-map-modeling-plugin/cover-depth.png',
+    detailImages: [
+      'https://player.bilibili.com/player.html?isOutside=true&aid=112507086244609&bvid=BV1dhKYehEjE&cid=500001560267804&p=1&high_quality=1&danmaku=0&autoplay=0&poster=https%3A%2F%2Fi0.hdslb.com%2Fbfs%2Farchive%2F924c79e404b7b9202cd45139d3fd6ffab7fd2f2a.jpg',
+    ],
+    position: '50% 50%',
+    categories: ['独立开发者'],
+  },
 ];
 
 const projects: Project[] = projectData;
@@ -187,6 +209,9 @@ const detailSectionTemplates = [
 ] as const;
 
 function getDetailSections(imageCount: number) {
+  if (imageCount <= 1) {
+    return [{ ...detailSectionTemplates[0], startIndex: 0 }];
+  }
   const lastImageIndex = Math.max(0, imageCount - 1);
   return detailSectionTemplates.map((section, index) => ({
     ...section,
@@ -196,9 +221,18 @@ function getDetailSections(imageCount: number) {
 
 function DetailMedia({ src, alt }: { src: string; alt: string }) {
   const isVideo = /\.(mp4|webm|mov)$/i.test(src);
+  const isBilibiliVideo = /^https:\/\/(?:player\.bilibili\.com|www\.bilibili\.com\/blackboard\/)/i.test(src);
   return (
-    <div className="detail-media-frame" data-detail-media>
-      {isVideo ? (
+    <div className={`detail-media-frame${isBilibiliVideo ? ' is-embed' : ''}`} data-detail-media>
+      {isBilibiliVideo ? (
+        <iframe
+          src={src}
+          title={alt}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      ) : isVideo ? (
         <video src={src} aria-label={alt} autoPlay muted loop playsInline />
       ) : (
         <img src={src} alt={alt} />
